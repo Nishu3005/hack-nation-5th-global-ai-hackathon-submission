@@ -36,26 +36,44 @@ export default function PlaygroundPage() {
       return
     }
 
-    const res = await fetch("/api/v1/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, tier }),
-    })
-
-    if (res.status === 402) {
-      const data = await res.json()
-      setStep({
-        type: "payment_required",
-        invoice: data.invoice,
-        paymentHash: data.paymentHash,
-        macaroon: data.macaroon,
-        amountSats: data.amountSats,
+    try {
+      const res = await fetch("/api/v1/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, tier }),
       })
-      return
-    }
 
-    const data = await res.json()
-    setStep({ type: "result", data })
+      const text = await res.text()
+      let data: unknown
+      try {
+        data = JSON.parse(text)
+      } catch {
+        setStep({ type: "error", message: `Server error (${res.status}): ${text.slice(0, 200) || "empty response"}` })
+        return
+      }
+
+      if (res.status === 402) {
+        const d = data as { invoice: string; paymentHash: string; macaroon: string; amountSats: number }
+        setStep({
+          type: "payment_required",
+          invoice: d.invoice,
+          paymentHash: d.paymentHash,
+          macaroon: d.macaroon,
+          amountSats: d.amountSats,
+        })
+        return
+      }
+
+      if (!res.ok) {
+        const d = data as { error?: string }
+        setStep({ type: "error", message: d.error ?? `Server error ${res.status}` })
+        return
+      }
+
+      setStep({ type: "result", data })
+    } catch (err) {
+      setStep({ type: "error", message: err instanceof Error ? err.message : "Network error" })
+    }
   }
 
   async function handleResearch() {

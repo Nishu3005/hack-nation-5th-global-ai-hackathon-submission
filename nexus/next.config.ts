@@ -5,14 +5,14 @@ const nextConfig: NextConfig = {
     "pino",
     "pino-pretty",
     "opossum",
+    "@prisma/adapter-pg",
+    "pg",
     "@langchain/langgraph",
     "@langchain/langgraph-checkpoint",
     "@langchain/core",
     "@langchain/anthropic",
     "langchain",
     "@anthropic-ai/sdk",
-    "@prisma/adapter-neon",
-    "@neondatabase/serverless",
   ],
 };
 

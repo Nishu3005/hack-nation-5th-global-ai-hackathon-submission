@@ -218,6 +218,7 @@ def display_results(data: dict, query: str, tier: str) -> None:
 
 
 def main():
+    global NEXUS_API
     print_banner()
 
     parser = argparse.ArgumentParser(description="Nexus Demo Agent — Autonomous L402 Lightning payment")
@@ -227,7 +228,6 @@ def main():
     parser.add_argument("--api", default=NEXUS_API, help="Nexus API URL")
     args = parser.parse_args()
 
-    global NEXUS_API
     NEXUS_API = args.api
 
     if args.tier == "RESEARCH":

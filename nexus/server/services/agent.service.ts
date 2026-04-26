@@ -1,7 +1,7 @@
 import { db } from "@/lib/db"
 import { redis, CACHE_KEYS } from "@/lib/redis"
 import { AGENT_REGISTRATION_SATS, PLATFORM_FEE_PCT } from "@/config/pricing"
-import { TaskStatus, TaskType } from "@/app/generated/prisma/index"
+import { TaskStatus, TaskType } from "@prisma/client"
 import { z } from "zod"
 
 export const RegisterAgentSchema = z.object({
@@ -27,13 +27,13 @@ export async function registerAgent(data: z.infer<typeof RegisterAgentSchema>) {
       stakeAmountSats: AGENT_REGISTRATION_SATS,
     },
   })
-  await redis.del(CACHE_KEYS.agentList)
+  await redis?.del(CACHE_KEYS.agentList)
   return agent
 }
 
 export async function listAgents(capability?: string) {
   const cacheKey = `${CACHE_KEYS.agentList}:${capability ?? "all"}`
-  const cached = await redis.get(cacheKey)
+  const cached = await redis?.get(cacheKey)
   if (cached) return cached
 
   const agents = await db.agent.findMany({
@@ -45,7 +45,7 @@ export async function listAgents(capability?: string) {
     take: 50,
   })
 
-  await redis.setex(cacheKey, 30, agents)
+  await redis?.setex(cacheKey, 30, agents)
   return agents
 }
 
@@ -125,5 +125,5 @@ export async function updateReputation(agentId: string) {
     },
   })
 
-  await redis.del(CACHE_KEYS.agentList)
+  await redis?.del(CACHE_KEYS.agentList)
 }

@@ -3,7 +3,7 @@ import { redis, CACHE_KEYS } from "@/lib/redis"
 import { logger } from "@/lib/logger"
 import { generateMacaroon } from "@/lib/crypto"
 import { INVOICE_EXPIRY_SECONDS } from "@/config/pricing"
-import { Tier, PaymentStatus } from "@/app/generated/prisma/index"
+import { Tier, PaymentStatus } from "@prisma/client"
 import { nanoid } from "nanoid"
 
 const ALBY_API = process.env.LIGHTNING_NODE_URL ?? "https://api.getalby.com"
@@ -112,7 +112,7 @@ export async function verifyPayment(
 ): Promise<PaymentVerification> {
   // Check Redis cache first for speed
   const cacheKey = CACHE_KEYS.payment(`${macaroon.slice(-8)}:${preimage.slice(0, 8)}`)
-  const cached = await redis.get<boolean>(cacheKey)
+  const cached = await redis?.get<boolean>(cacheKey)
   if (cached === true) return { valid: true }
 
   // Look up the payment record
@@ -150,10 +150,10 @@ export async function verifyPayment(
   })
 
   // Cache the validation
-  await redis.setex(cacheKey, 3600, true)
+  await redis?.setex(cacheKey, 3600, true)
 
   // Publish payment event for dashboard stream
-  await redis.publish(CACHE_KEYS.stream, JSON.stringify({
+  await redis?.publish(CACHE_KEYS.stream, JSON.stringify({
     type: "payment",
     paymentHash: record.paymentHash,
     amountSats: record.tier,

@@ -44,8 +44,8 @@ interface Citation {
 
 async function pushEvent(streamId: string, event: string, data: unknown) {
   if (!streamId) return
-  await redis.rpush(`nexus:stream:${streamId}`, JSON.stringify({ event, data, timestamp: Date.now() }))
-  await redis.expire(`nexus:stream:${streamId}`, 120)
+  await redis?.rpush(`nexus:stream:${streamId}`, JSON.stringify({ event, data, timestamp: Date.now() }))
+  await redis?.expire(`nexus:stream:${streamId}`, 120)
 }
 
 async function analyzeQuery(state: typeof ResearchState.State) {

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { redis } from "@/lib/redis"
 import { db } from "@/lib/db"
 import { corsHeaders } from "@/server/middleware/l402"
-import { PaymentStatus } from "@/app/generated/prisma/index"
+import { PaymentStatus } from "@prisma/client"
 
 export const maxDuration = 60
 
@@ -77,9 +77,9 @@ export async function GET(req: NextRequest) {
 
         // Check for research stream events (per-streamId lists)
         // These are published by the research pipeline
-        const streamKeys = await redis.keys("nexus:stream:*")
+        const streamKeys = await redis?.keys("nexus:stream:*")
         for (const key of streamKeys.slice(0, 5)) {
-          const events = await redis.lrange(key, 0, -1)
+          const events = await redis?.lrange(key, 0, -1)
           for (const ev of events) {
             try {
               const parsed = JSON.parse(ev as string)

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       let lastEventId = 0
 
       const pollEvents = async () => {
-        const events = await redis.lrange(`nexus:stream:${streamId}`, lastEventId, -1)
+        const events = await redis?.lrange(`nexus:stream:${streamId}`, lastEventId, -1)
         for (const ev of events) {
           try {
             const parsed = JSON.parse(ev as string)
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Cleanup
-      await redis.del(`nexus:stream:${streamId}`)
+      await redis?.del(`nexus:stream:${streamId}`)
       controller.close()
     },
   })

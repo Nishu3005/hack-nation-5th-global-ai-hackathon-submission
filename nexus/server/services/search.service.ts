@@ -3,7 +3,7 @@ import { redis, CACHE_KEYS } from "@/lib/redis"
 import { db } from "@/lib/db"
 import { logger } from "@/lib/logger"
 import { getCacheTtl } from "@/config/pricing"
-import { Tier } from "@/app/generated/prisma/index"
+import { Tier } from "@prisma/client"
 import { LRUCache } from "lru-cache"
 import CircuitBreaker from "opossum"
 import pLimit from "p-limit"
@@ -109,21 +109,25 @@ export async function searchWithCache(
   if (lruHit) return { ...lruHit, fromCache: true, cachedAt: Date.now() }
 
   // Layer 2: Redis
-  const redisHit = await redis.get<SearchResult>(CACHE_KEYS.search(queryHash))
+  const redisHit = await redis?.get<SearchResult>(CACHE_KEYS.search(queryHash))
   if (redisHit) {
     lruCache.set(queryHash, redisHit)
     return { ...redisHit, fromCache: true, cachedAt: Date.now() }
   }
 
-  // Layer 3: DB
-  const dbHit = await db.searchCache.findUnique({ where: { queryHash } })
-  if (dbHit && dbHit.expiresAt > new Date()) {
-    const result = dbHit.result as unknown as SearchResult
-    await db.searchCache.update({ where: { queryHash }, data: { hitCount: { increment: 1 } } })
-    const ttl = getCacheTtl(tier)
-    await redis.setex(CACHE_KEYS.search(queryHash), ttl, result)
-    lruCache.set(queryHash, result)
-    return { ...result, fromCache: true, cachedAt: Date.now() }
+  // Layer 3: DB (skip gracefully if tables don't exist yet)
+  try {
+    const dbHit = await db.searchCache.findUnique({ where: { queryHash } })
+    if (dbHit && dbHit.expiresAt > new Date()) {
+      const result = dbHit.result as unknown as SearchResult
+      await db.searchCache.update({ where: { queryHash }, data: { hitCount: { increment: 1 } } })
+      const ttl = getCacheTtl(tier)
+      await redis?.setex(CACHE_KEYS.search(queryHash), ttl, result)
+      lruCache.set(queryHash, result)
+      return { ...result, fromCache: true, cachedAt: Date.now() }
+    }
+  } catch {
+    logger.warn("DB cache unavailable — falling through to Tavily")
   }
 
   // Miss — call Tavily
@@ -133,14 +137,14 @@ export async function searchWithCache(
   const ttl = getCacheTtl(tier)
   const expiresAt = new Date(Date.now() + ttl * 1000)
 
-  // Write to all layers
+  // Write to all layers (DB write skipped gracefully if tables missing)
   await Promise.all([
-    redis.setex(CACHE_KEYS.search(queryHash), ttl, result),
+    redis?.setex(CACHE_KEYS.search(queryHash), ttl, result),
     db.searchCache.upsert({
       where: { queryHash },
       create: { queryHash, tier, query, result: JSON.parse(JSON.stringify(result)), expiresAt },
       update: { result: JSON.parse(JSON.stringify(result)), expiresAt, hitCount: 0 },
-    }),
+    }).catch(() => null),
   ])
   lruCache.set(queryHash, result)
 

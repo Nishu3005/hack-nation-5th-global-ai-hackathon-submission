@@ -1,4 +1,7 @@
 {
+  "framework": "nextjs",
+  "buildCommand": "prisma migrate deploy && pnpm build",
+  "installCommand": "pnpm install",
   "functions": {
     "app/api/v1/research/route.ts": { "maxDuration": 60 },
     "app/api/v1/stream/route.ts": { "maxDuration": 60 }

@@ -20,7 +20,7 @@ export async function GET() {
   // Redis check
   const redisStart = Date.now()
   try {
-    await redis.ping()
+    await redis?.ping()
     checks.redis = { status: "ok", latencyMs: Date.now() - redisStart }
   } catch {
     checks.redis = { status: "error" }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { hashQuery, verifyMacaroon } from "@/lib/crypto"
 import { createInvoice, verifyPayment } from "@/server/services/payment.service"
 import { getSatsForTier, getCacheTtl } from "@/config/pricing"
-import { Tier } from "@/app/generated/prisma/index"
+import { Tier } from "@prisma/client"
 import { z } from "zod"
 
 export interface L402Context {
