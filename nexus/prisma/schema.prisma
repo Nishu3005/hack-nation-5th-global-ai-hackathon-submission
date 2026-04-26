@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Tier {
+  FLASH
+  BASIC
+  DEEP
+  RESEARCH
+  EXTRACT
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  FAILED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DISPUTED
+  CANCELLED
+}
+
+enum TaskType {
+  SEARCH
+  RESEARCH
+  ANALYSIS
+  SYNTHESIS
+  CUSTOM
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  paymentHash   String        @unique
+  preimage      String?
+  amountSats    Int
+  tier          Tier
+  queryHash     String
+  status        PaymentStatus @default(PENDING)
+  invoiceBolt11 String
+  macaroon      String
+  expiresAt     DateTime
+  settledAt     DateTime?
+  agentId       String?
+  agent         Agent?        @relation(fields: [agentId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([paymentHash])
+  @@index([queryHash])
+  @@index([status])
+  @@index([agentId])
+  @@index([createdAt])
+}
+
+model Agent {
+  id               String   @id @default(cuid())
+  name             String
+  description      String
+  capabilities     String[]
+  endpoint         String
+  stakeAmountSats  Int      @default(0)
+  reputationScore  Float    @default(0)
+  completionRate   Float    @default(0)
+  avgResponseMs    Int      @default(0)
+  disputeRate      Float    @default(0)
+  totalTasksDone   Int      @default(0)
+  lightningAddress String?
+  pubkey           String?
+  isActive         Boolean  @default(true)
+  payments         Payment[]
+  tasksAsHiree     Task[]   @relation("HireeAgent")
+  tasksAsHirer     Task[]   @relation("HirerAgent")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([reputationScore])
+  @@index([isActive])
+}
+
+model Task {
+  id               String     @id @default(cuid())
+  type             TaskType
+  status           TaskStatus @default(PENDING)
+  description      String
+  result           String?
+  errorMsg         String?
+  stakeAmountSats  Int        @default(0)
+  bountyAmountSats Int        @default(0)
+  hireeId          String
+  hirerId          String?
+  hiree            Agent      @relation("HireeAgent", fields: [hireeId], references: [id])
+  hirer            Agent?     @relation("HirerAgent", fields: [hirerId], references: [id])
+  escrowPaid       Boolean    @default(false)
+  escrowReleased   Boolean    @default(false)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  disputedAt       DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([hireeId])
+  @@index([hirerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SearchCache {
+  id        String   @id @default(cuid())
+  queryHash String   @unique
+  tier      Tier
+  query     String
+  result    Json
+  hitCount  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([queryHash])
+  @@index([expiresAt])
+  @@index([tier])
+}
+
+model InvoiceIdempotency {
+  id          String   @id @default(cuid())
+  queryHash   String
+  tier        Tier
+  bolt11      String
+  paymentHash String   @unique
+  macaroon    String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([queryHash, tier])
+  @@index([paymentHash])
+  @@index([expiresAt])
+}

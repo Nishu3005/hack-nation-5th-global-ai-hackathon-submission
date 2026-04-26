@@ -1,0 +1,14 @@
+import { Redis } from "@upstash/redis"
+
+export const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
+
+export const CACHE_KEYS = {
+  search: (hash: string) => `nexus:search:${hash}`,
+  payment: (hash: string) => `nexus:payment:${hash}`,
+  rateLimit: (ip: string) => `nexus:rate:${ip}`,
+  stream: "nexus:stream:events",
+  agentList: "nexus:agents:list",
+} as const
